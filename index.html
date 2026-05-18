@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chuyma Cava & Freshness - Official v1.2</title>
+    <title>Chuyma Cava & Freshness - Official v1.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -93,7 +93,7 @@
                             </div>
                             <div id="contenedor-estilo-manual" class="hidden">
                                 <label class="block text-xs font-bold uppercase text-amber-500 mb-1">Escribe el estilo manual</label>
-                                <input type="text" id="lote-estilo-manual" placeholder="Ej: Pumpkin Sour Ale" class="w-full bg-slate-800 border border-amber-500 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="lote-estilo-manual" placeholder="Ej: Pumpkin Sour Ale" class="w-full bg-slate-800 border border-amber-500 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500">
                             </div>
                         </div>
 
@@ -157,4 +157,259 @@
         var estadoFiltro = "todos";
 
         var vistaLogin = document.getElementById('vista-login');
-        var vistaApp = document.getElementById('vista-
+        var vistaApp = document.getElementById('vista-app');
+        var errorTxt = document.getElementById('login-error');
+        var buscador = document.getElementById('buscador');
+        var listaLotes = document.getElementById('lista-lotes');
+        var formLote = document.getElementById('form-lote');
+        var qrcodeContainer = document.getElementById('qrcode-container');
+
+        // REPARADO INTERNAMENTE CON LOS ID EXACTOS DEL FORMULARIO DEL LOGIN
+        document.getElementById('btn-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            errorTxt.classList.add('hidden');
+            
+            var email = document.getElementById('login-email').value.trim();
+            var pass = document.getElementById('login-password').value.trim();
+            
+            if(!email || !pass) return;
+            
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(function() {
+                    console.log("Acceso exitoso detectado");
+                })
+                .catch(function(err) {
+                    console.error("Fallo de acceso:", err);
+                    errorTxt.textContent = "Clave o usuario incorrecto.";
+                    errorTxt.classList.remove('hidden');
+                });
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', function() { auth.signOut(); });
+
+        auth.onAuthStateChanged(function(user) {
+            if (user) {
+                vistaLogin.classList.add('hidden');
+                vistaApp.classList.remove('hidden');
+                
+                db.collection("inventario").where("esProductoTerminado", "==", true).onSnapshot(function(snapshot) {
+                    lotesLocales = [];
+                    snapshot.forEach(function(doc) {
+                        lotesLocales.push(Object.assign({ id: doc.id }, doc.data()));
+                    });
+                    calcularMetricasYRender();
+                });
+            } else {
+                vistaLogin.classList.remove('hidden');
+                vistaApp.classList.add('hidden');
+            }
+        });
+
+        window.verificarEstiloPersonalizado = function(val) {
+            var manualInput = document.getElementById('contenedor-estilo-manual');
+            if(val === 'PERSONALIZADO') {
+                manualInput.classList.remove('hidden');
+            } else {
+                manualInput.classList.add('hidden');
+                document.getElementById('lote-estilo-manual').value = "";
+            }
+        };
+
+        window.filtrarPorEstado = function(estado) {
+            estadoFiltro = estado;
+            document.querySelectorAll('.tab-btn').forEach(function(btn) {
+                btn.className = "tab-btn px-4 py-2 rounded-xl font-bold text-xs uppercase bg-slate-900 text-slate-400";
+            });
+            document.getElementById('tab-' + estado).className = "tab-btn px-4 py-2 rounded-xl font-bold text-xs uppercase bg-emerald-500 text-slate-950 shadow";
+            ejecutarFiltro();
+        };
+
+        function ejecutarFiltro() {
+            var txt = buscador.value.toLowerCase();
+            var hoy = new Date();
+
+            var filtrados = lotesLocales.filter(function(l) {
+                var fechaEnvasado = new Date(l.fecha + "T00:00:00");
+                var diffTiempo = hoy.getTime() - fechaEnvasado.getTime();
+                var diasTranscurridos = Math.floor(diffTiempo / (1000 * 3600 * 24));
+                var esCritico = diasTranscurridos > 120;
+
+                var matchesEstado = true;
+                if(estadoFiltro === 'fresco') matchesEstado = !esCritico;
+                if(estadoFiltro === 'critico') matchesEstado = esCritico;
+
+                var matchesTxt = l.estilo.toLowerCase().includes(txt) || l.codigo.toLowerCase().includes(txt);
+                return matchesEstado && matchesTxt;
+            });
+
+            renderLista(filtrados);
+        }
+
+        buscador.addEventListener('input', ejecutarFiltro);
+
+        function calcularMetricasYRender() {
+            var hoy = new Date();
+            var lotesCriticos = 0;
+
+            lotesLocales.forEach(function(l) {
+                var fechaEnvasado = new Date(l.fecha + "T00:00:00");
+                var diffTiempo = hoy.getTime() - fechaEnvasado.getTime();
+                var diasTranscurridos = Math.floor(diffTiempo / (1000 * 3600 * 24));
+                if(diasTranscurridos > 120) lotesCriticos++;
+            });
+
+            var statusDiv = document.getElementById('alerta-status');
+            if(lotesCriticos > 0) {
+                statusDiv.innerHTML = `<span class="w-2 h-2 bg-rose-500 rounded-full inline-block animate-ping"></span> ${lotesCriticos} LOTES CRÍTICOS (>120 DÍAS)`;
+                statusDiv.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-950/40 text-rose-400 text-xs font-black border border-rose-900/40";
+            } else {
+                statusDiv.innerHTML = `<span class="w-2 h-2 bg-emerald-400 rounded-full inline-block"></span> TODO FRESCO EN CAVA`;
+                statusDiv.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-emerald-400 text-xs font-bold border border-slate-800";
+            }
+            ejecutarFiltro();
+        }
+
+        function renderLista(datos) {
+            listaLotes.innerHTML = "";
+            if(datos.length === 0) {
+                listaLotes.innerHTML = `<div class="col-span-full text-center py-12 text-slate-600 font-medium text-sm">No hay registros de producto terminado aún.</div>`;
+                return;
+            }
+
+            var hoy = new Date();
+
+            datos.forEach(function(item) {
+                var fechaEnvasado = new Date(item.fecha + "T00:00:00");
+                var diffTiempo = hoy.getTime() - fechaEnvasado.getTime();
+                var diasTranscurridos = Math.floor(diffTiempo / (1000 * 3600 * 24));
+                var esCritico = diasTranscurridos > 120;
+
+                var card = document.createElement('div');
+                card.className = `bg-slate-900 p-5 rounded-2xl border flex flex-col justify-between h-48 shadow-lg transition ${esCritico ? 'border-rose-500/50 shadow-rose-950/10' : 'border-slate-850 hover:border-slate-800'}`;
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start gap-2">
+                            <h3 class="font-black text-white text-lg truncate w-full tracking-wide">${item.estilo}</h3>
+                            <span class="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded bg-slate-950 text-emerald-400">${item.codigo}</span>
+                        </div>
+                        <p class="text-xs font-bold text-slate-500 mt-1">Envasado: <span class="text-slate-300">${item.fecha}</span></p>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-slate-850 pt-3">
+                        <div>
+                            <span class="text-[10px] uppercase text-slate-500 font-bold block">Edad en Cava</span>
+                            <span class="font-black text-base ${esCritico ? 'text-rose-400' : 'text-emerald-400'}">${diasTranscurridos} días</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] uppercase text-slate-500 font-bold block">Cantidad</span>
+                            <span class="font-black text-white text-base block">${item.cajas} cajas</span>
+                        </div>
+                        <button onclick="verFichaCava('${item.id}')" class="bg-emerald-500 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs uppercase cursor-pointer">Detalle</button>
+                    </div>
+                `;
+                listaLotes.appendChild(card);
+            });
+        }
+
+        window.verFichaCava = function(id) {
+            idLoteSeleccionado = id;
+            var item = lotesLocales.find(function(l) { return l.id === id; });
+            
+            document.getElementById('form-titulo').textContent = "Modificar Lote en Cava";
+            document.getElementById('lote-codigo').value = item.codigo;
+            document.getElementById('lote-fecha').value = item.fecha;
+            document.getElementById('lote-cajas').value = item.cajas;
+            document.getElementById('lote-ubicacion').value = item.ubicacion || "";
+
+            var selectEstilo = document.getElementById('lote-estilo');
+            if(item.estilo === 'Pale Ale' || item.estilo === 'Amber Ale') {
+                selectEstilo.value = item.estilo;
+                verificarEstiloPersonalizado(item.estilo);
+            } else {
+                selectEstilo.value = 'PERSONALIZADO';
+                verificarEstiloPersonalizado('PERSONALIZADO');
+                document.getElementById('lote-estilo-manual').value = item.estilo;
+            }
+
+            qrcodeContainer.innerHTML = "";
+            new QRCode(qrcodeContainer, { text: id, width: 120, height: 120 });
+            formLote.classList.remove('hidden');
+            formLote.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        document.getElementById('btn-nuevo-lote').addEventListener('click', function() {
+            idLoteSeleccionado = null;
+            document.getElementById('form-titulo').textContent = "Registrar Salida de Embotellado";
+            document.getElementById('lote-codigo').value = "";
+            document.getElementById('lote-fecha').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lote-cajas').value = "";
+            document.getElementById('lote-ubicacion').value = "";
+            document.getElementById('lote-estilo').value = "Pale Ale";
+            verificarEstiloPersonalizado("Pale Ale");
+            qrcodeContainer.innerHTML = "<p class='text-[10px] text-slate-600 p-4 font-bold uppercase'>Se creará al guardar</p>";
+            formLote.classList.remove('hidden');
+            formLote.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        document.getElementById('btn-cancelar').addEventListener('click', function() { formLote.classList.add('hidden'); });
+
+        document.getElementById('btn-guardar').addEventListener('click', function() {
+            var estiloSelect = document.getElementById('lote-estilo').value;
+            var estiloFinal = estiloSelect;
+
+            if(estiloSelect === 'PERSONALIZADO') {
+                estiloFinal = document.getElementById('lote-estilo-manual').value.trim();
+            }
+
+            var payload = {
+                estilo: estiloFinal,
+                codigo: document.getElementById('lote-codigo').value.trim().toUpperCase(),
+                fecha: document.getElementById('lote-fecha').value,
+                cajas: Number(document.getElementById('lote-cajas').value),
+                ubicacion: document.getElementById('lote-ubicacion').value.trim(),
+                esProductoTerminado: true 
+            };
+
+            if(!payload.estilo || !payload.codigo || !payload.fecha) {
+                alert("Por favor completa los datos obligatorios.");
+                return;
+            }
+
+            if(idLoteSeleccionado) {
+                db.collection("inventario").doc(idLoteSeleccionado).update(payload);
+            } else {
+                db.collection("inventario").add(payload);
+            }
+
+            formLote.classList.add('hidden');
+        });
+
+        document.getElementById('btn-imprimir-qr').addEventListener('click', function() {
+            var estiloSelect = document.getElementById('lote-estilo').value;
+            var estilo = estiloSelect === 'PERSONALIZADO' ? document.getElementById('lote-estilo-manual').value : estiloSelect;
+            var codigo = document.getElementById('lote-codigo').value || "S/L";
+            var win = window.open('', '_blank', 'width=400,height=400');
+            win.document.write('<html><body style="text-align:center;font-family:sans-serif;padding:20px;"><h2>CHUYMA CAVA</h2><p><b>'+estilo+'</b></p><p>Lote: '+codigo+'</p><div>'+qrcodeContainer.innerHTML+'</div><script>window.onload=function(){window.print();window.close();}<\/script></body></html>');
+            win.document.close();
+        });
+
+        document.getElementById('btn-abrir-camara').addEventListener('click', function() {
+            document.getElementById('contenedor-camara').classList.remove('hidden');
+            qrScanner = new Html5Qrcode("lector-qr");
+            qrScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 220 },
+                function(idScaneado) {
+                    qrScanner.stop().then(function() {
+                        document.getElementById('contenedor-camara').classList.add('hidden');
+                        verFichaCava(idScaneado);
+                    });
+                }, function() {}
+            ).catch(function() { document.getElementById('contenedor-camara').classList.add('hidden'); });
+        });
+
+        document.getElementById('btn-cerrar-camara').addEventListener('click', function() {
+            if(qrScanner) qrScanner.stop().then(function() { document.getElementById('contenedor-camara').classList.add('hidden'); });
+            else document.getElementById('contenedor-camara').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
