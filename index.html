@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chuyma Cava & Fresh Control</title>
+    <title>Chuyma Cava & Freshness - Official v1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen font-sans antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
     <div id="vista-login" class="flex flex-col items-center justify-center min-h-screen px-4">
-        <div class="bg-gray-900 border border-amber-500/30 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-            <h1 class="text-4xl font-black text-center text-amber-500 tracking-wider mb-1">CHUYMA CAVA</h1>
-            <p class="text-gray-400 text-center text-xs uppercase tracking-widest mb-8">Control de Producto Terminado y Frescura</p>
+        <div class="bg-slate-900 border border-emerald-500/30 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <h1 class="text-4xl font-black text-center text-emerald-500 tracking-wider mb-1">CHUYMA</h1>
+            <p class="text-slate-400 text-center text-xs uppercase tracking-widest mb-8">Cava & Trazabilidad de Producto Terminado</p>
             
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Correo Electrónico</label>
-                    <input type="email" id="login-email" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-amber-500 transition">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Correo Electrónico</label>
+                    <input type="email" id="login-email" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-emerald-500 transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Contraseña</label>
-                    <input type="password" id="login-password" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-amber-500 transition">
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Contraseña</label>
+                    <input type="password" id="login-password" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3.5 text-white focus:outline-none focus:border-emerald-500 transition">
                 </div>
-                <button id="btn-login" class="w-full bg-amber-500 hover:bg-amber-600 text-gray-950 font-black py-4 px-4 rounded-xl transition duration-200 mt-2 text-lg uppercase tracking-wide cursor-pointer">
+                <button id="btn-login" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-4 px-4 rounded-xl transition duration-200 mt-2 text-lg uppercase tracking-wide cursor-pointer">
                     Abrir Cava
                 </button>
                 <p id="login-error" class="text-red-400 text-sm text-center font-semibold mt-2 hidden"></p>
@@ -34,266 +36,41 @@
     </div>
 
     <div id="vista-app" class="hidden min-h-screen flex flex-col">
-        <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-40">
+        <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-40">
             <div class="max-w-6xl w-full mx-auto flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-black text-amber-500 tracking-wide">CHUYMA CAVA</h1>
-                    <p class="text-xs text-gray-400 font-medium">Monitoreo Marcas, Formatos y Ventanas FIFO</p>
+                    <h1 class="text-2xl font-black text-emerald-500 tracking-wide">CHUYMA CAVA</h1>
+                    <p class="text-xs text-slate-400 font-medium">Control de Maduración y Frescura (Módulo 120 días)</p>
                 </div>
-                <button id="btn-logout" class="bg-red-950/40 hover:bg-red-900/40 border border-red-800 text-red-300 font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition">
-                    Salir
-                </button>
+                <div class="flex items-center gap-4">
+                    <div id="alerta-status" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 text-slate-400 text-xs font-bold border border-slate-800"></div>
+                    <button id="btn-logout" class="bg-red-950/40 hover:bg-red-900/40 border border-red-800 text-red-300 font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition">
+                        Salir
+                    </button>
+                </div>
             </div>
         </header>
 
         <main class="flex-1 p-4 max-w-6xl w-full mx-auto space-y-6">
-            <div class="flex justify-between items-center gap-4">
-                <input type="text" id="buscador" placeholder="🔍 Buscar lote o variedad..." class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-xl p-4 text-white text-base focus:outline-none focus:border-amber-500 placeholder-gray-500 shadow-inner">
-                <button id="btn-nuevo-lote" class="bg-amber-500 hover:bg-amber-600 text-gray-950 font-black px-6 py-4 rounded-xl flex items-center gap-2 shadow-lg text-sm uppercase tracking-wider transition cursor-pointer whitespace-nowrap">
-                    🍺 REGISTRAR ENVASE DE LOTE
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="buscador" placeholder="🔍 Buscar por lote o estilo..." class="md:col-span-1 w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-white text-base focus:outline-none focus:border-emerald-500 shadow-inner">
+                <button id="btn-abrir-camara" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black p-4 rounded-xl flex items-center justify-center gap-2 shadow-lg text-sm uppercase tracking-wider transition cursor-pointer">
+                    📷 ESCANEAR QR EN CAVA
+                </button>
+                <button id="btn-nuevo-lote" class="bg-slate-900 hover:bg-slate-850 text-emerald-500 border border-emerald-500/20 font-bold p-4 rounded-xl flex items-center justify-center gap-2 shadow-lg text-sm uppercase tracking-wider transition cursor-pointer">
+                    🧪 REGISTRAR SALIDA DE EMBOTELLADO
                 </button>
             </div>
 
-            <div id="lista-productos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-            <div id="form-producto" class="hidden bg-gray-900 p-6 rounded-2xl border border-gray-800 space-y-6 shadow-2xl max-w-2xl mx-auto">
-                <h2 id="form-titulo" class="text-2xl font-black text-amber-500 border-b border-gray-800 pb-3 uppercase tracking-wide">Registro de Producto Terminado</h2>
-                
-                <div class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Variedad / Estilo</label>
-                            <select id="prod-estilo" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white font-semibold focus:outline-none focus:border-amber-500">
-                                <option value="Pale Ale">Pale Ale</option>
-                                <option value="Amber Ale">Amber Ale</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Formato de Envase</label>
-                            <select id="prod-formato" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white font-semibold focus:outline-none focus:border-amber-500">
-                                <option value="Botella 330cc">Botella 330cc</option>
-                                <option value="Botella 500cc">Botella 500cc</option>
-                                <option value="Lata 473cc">Lata 473cc</option>
-                                <option value="Barril 30L">Barril 30L</option>
-                                <option value="Barril 50L">Barril 50L</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Cantidad Actual</label>
-                            <input type="number" id="prod-stock" placeholder="Ej: 120" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white font-bold text-center focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Cantidad Mínima</label>
-                            <input type="number" id="prod-minimo" placeholder="Ej: 24" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white font-bold text-center focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Lote / Identificador</label>
-                            <input type="text" id="prod-lote" placeholder="Ej: L-PA01" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white text-center focus:outline-none focus:border-amber-500">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Fecha de Envasado</label>
-                        <input type="date" id="prod-fecha" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-white font-semibold focus:outline-none focus:border-amber-500">
-                    </div>
-                </div>
-
-                <div class="flex gap-3 justify-end border-t border-gray-800 pt-4">
-                    <button id="btn-cancelar" class="bg-gray-750 text-gray-400 font-bold px-5 py-3 rounded-xl hover:bg-gray-700 transition cursor-pointer">Cancelar</button>
-                    <button id="btn-guardar" class="bg-amber-500 text-gray-950 font-black px-8 py-3 rounded-xl hover:bg-amber-600 transition uppercase tracking-wider text-sm cursor-pointer">Guardar Lote</button>
-                </div>
+            <div id="contenedor-camara" class="hidden bg-black p-4 rounded-2xl border border-emerald-500 max-w-md mx-auto relative shadow-2xl">
+                <div id="lector-qr" class="w-full overflow-hidden rounded-xl"></div>
+                <button id="btn-cerrar-camara" class="w-full bg-red-600 hover:bg-red-700 text-white font-black p-3 rounded-xl mt-3 text-xs uppercase tracking-wider transition cursor-pointer">
+                    Apagar Cámara
+                </button>
             </div>
-        </main>
-    </div>
 
-    <script>
-        // CONFIGURACIÓN OFICIAL COMPARTIDA DE TU PROYECTO CHUYMA
-        var firebaseConfig = {
-            apiKey: "AIzaSyBSaIzbcFiyTF1zy9_9Z97ZSPfL322xO24",
-            authDomain: "inventariochuyma-da052.firebaseapp.com",
-            projectId: "inventariochuyma-da052",
-            storageBucket: "inventariochuyma-da052.firebasestorage.app",
-            messagingSenderId: "677439195293",
-            appId: "1:677439195293:web:50b624de9e0c877c89ec74"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        var auth = firebase.auth();
-        var db = firebase.firestore();
-
-        var productosLocales = [];
-        var idSeleccionado = null;
-
-        var vistaLogin = document.getElementById('vista-login');
-        var vistaApp = document.getElementById('vista-app');
-        var errorTxt = document.getElementById('login-error');
-        var buscador = document.getElementById('buscador');
-        var listaProductos = document.getElementById('lista-productos');
-        var formProducto = document.getElementById('form-producto');
-
-        // LOGIN AUTO-MANEJADO
-        document.getElementById('btn-login').addEventListener('click', function(e) {
-            e.preventDefault();
-            errorTxt.classList.add('hidden');
-            var email = document.getElementById('login-email').value.trim();
-            var pass = document.getElementById('login-password').value.trim();
-            if(!email || !pass) return;
-            auth.signInWithEmailAndPassword(email, pass).catch(function() {
-                errorTxt.textContent = "Clave o usuario incorrecto.";
-                errorTxt.classList.remove('hidden');
-            });
-        });
-
-        document.getElementById('btn-logout').addEventListener('click', function() { auth.signOut(); });
-
-        auth.onAuthStateChanged(function(user) {
-            if (user) {
-                vistaLogin.classList.add('hidden');
-                vistaApp.classList.remove('hidden');
-                // COLECCIÓN EXCLUSIVA PARA PRODUCTO TERMINADO
-                db.collection("producto_terminado").onSnapshot(function(snapshot) {
-                    productosLocales = [];
-                    snapshot.forEach(function(doc) {
-                        productosLocales.push(Object.assign({ id: doc.id }, doc.data()));
-                    });
-                    ejecutarFiltro();
-                });
-            } else {
-                vistaLogin.classList.remove('hidden');
-                vistaApp.classList.add('hidden');
-            }
-        });
-
-        function ejecutarFiltro() {
-            var txt = buscador.value.toLowerCase();
-            var filtrados = productosLocales.filter(function(p) {
-                return p.estilo.toLowerCase().includes(txt) || p.lote.toLowerCase().includes(txt);
-            });
-            renderLista(filtrados);
-        }
-
-        buscador.addEventListener('input', ejecutarFiltro);
-
-        // ALGORITMO AUTOMÁTICO DE FRESCURA (REGLA 120 DÍAS DE LA BREWERS ASSOCIATION)
-        function renderLista(datos) {
-            listaProductos.innerHTML = "";
-            if(datos.length === 0) {
-                listaProductos.innerHTML = `<div class="col-span-full text-center py-12 text-gray-600 font-medium text-sm">No hay lotes en cava.</div>`;
-                return;
-            }
-
-            var hoy = new Date();
-
-            datos.forEach(function(item) {
-                var fechaEnvasado = new Date(item.fecha + "T00:00:00");
-                var diferenciaTiempo = hoy.getTime() - fechaEnvasado.getTime();
-                var diasTranscurridos = Math.floor(diferenciaTiempo / (1000 * 3600 * 24));
-
-                var colorSemafolo = "border-green-600/60 shadow-green-950/10";
-                var textoEstado = "🟢 FRESCO / ÓPTIMO";
-                var diasRestantesTxt = (120 - diasTranscurridos) + " días restantes";
-
-                if (diasTranscurridos > 90 && diasTranscurridos <= 120) {
-                    colorSemafolo = "border-amber-500/60 shadow-amber-950/10 animate-pulse";
-                    textoEstado = "🟡 ROTACIÓN PRIORITARIA (FIFO)";
-                } else if (diasTranscurridos > 120) {
-                    colorSemafolo = "border-red-600/60 shadow-red-950/10";
-                    textoEstado = "🔴 VENTANA EXCEDIDA";
-                    diasRestantesTxt = "Excedido por " + (diasTranscurridos - 120) + " días";
-                }
-
-                // Alerta extra si la cantidad cae por debajo de la mínima declarada
-                var cantidadBaja = item.minimo && Number(item.stock) <= Number(item.minimo);
-
-                var card = document.createElement('div');
-                card.className = `bg-gray-900 p-5 rounded-2xl border transition shadow-lg flex flex-col justify-between h-52 ${colorSemafolo}`;
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-start gap-2">
-                            <div>
-                                <h3 class="font-black text-white text-lg tracking-wide">${item.estilo}</h3>
-                                <p class="text-xs font-bold text-gray-400 -mt-0.5">${item.formato}</p>
-                            </div>
-                            <span class="text-[9px] font-extrabold uppercase px-2 py-1 rounded bg-gray-950 text-amber-500 whitespace-nowrap">${item.lote}</span>
-                        </div>
-                        <div class="mt-2 space-y-0.5">
-                            <p class="text-[11px] font-black tracking-wide">${textoEstado}</p>
-                            <p class="text-[10px] text-gray-500 font-bold">Envasado: ${item.fecha} (<span class="text-gray-300">${diasRestantesTxt}</span>)</p>
-                            ${cantidadBaja ? '<p class="text-[9px] text-red-400 font-extrabold uppercase tracking-wider">⚠️ CANTIDAD MÍNIMA CRÍTICA</p>' : ''}
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between border-t border-gray-850 pt-2.5">
-                        <div class="flex items-center gap-1.5">
-                            <button onclick="cambiarStock('${item.id}', -1)" class="bg-gray-800 text-white w-10 h-10 rounded-xl font-black text-xl cursor-pointer">-</button>
-                            <div class="text-center min-w-[55px]">
-                                <span class="font-black text-lg text-white block">${item.stock}</span>
-                                <span class="text-[9px] text-gray-500 uppercase font-bold block -mt-1">unidades</span>
-                            </div>
-                            <button onclick="cambiarStock('${item.id}', 1)" class="bg-gray-800 text-white w-10 h-10 rounded-xl font-black text-xl cursor-pointer">+</button>
-                        </div>
-                        <button onclick="editarLote('${item.id}')" class="bg-amber-500 text-gray-950 font-black px-3.5 py-2 rounded-xl text-xs uppercase cursor-pointer">Editar</button>
-                    </div>
-                `;
-                listaProductos.appendChild(card);
-            });
-        }
-
-        window.cambiarStock = function(id, cambio) {
-            var item = productosLocales.find(function(p) { return p.id === id; });
-            if(item) {
-                db.collection("producto_terminado").doc(id).update({ stock: Math.max(0, Number(item.stock) + cambio) });
-            }
-        };
-
-        window.editarLote = function(id) {
-            idSeleccionado = id;
-            var item = productosLocales.find(function(p) { return p.id === id; });
-            document.getElementById('form-titulo').textContent = "Modificar Datos de Lote";
-            document.getElementById('prod-estilo').value = item.estilo;
-            document.getElementById('prod-formato').value = item.formato;
-            document.getElementById('prod-stock').value = item.stock;
-            document.getElementById('prod-minimo').value = item.minimo;
-            document.getElementById('prod-lote').value = item.lote;
-            document.getElementById('prod-fecha').value = item.fecha;
-            formProducto.classList.remove('hidden');
-            formProducto.scrollIntoView({ behavior: 'smooth' });
-        };
-
-        document.getElementById('btn-nuevo-lote').addEventListener('click', function() {
-            idSeleccionado = null;
-            document.getElementById('form-titulo').textContent = "Registrar Envase de Lote";
-            document.getElementById('prod-stock').value = "";
-            document.getElementById('prod-minimo').value = "";
-            document.getElementById('prod-lote').value = "";
-            document.getElementById('prod-fecha').value = new Date().toISOString().split('T')[0];
-            formProducto.classList.remove('hidden');
-            formProducto.scrollIntoView({ behavior: 'smooth' });
-        });
-
-        document.getElementById('btn-cancelar').addEventListener('click', function() { formProducto.classList.add('hidden'); });
-
-        document.getElementById('btn-guardar').addEventListener('click', function() {
-            var payload = {
-                estilo: document.getElementById('prod-estilo').value,
-                formato: document.getElementById('prod-formato').value,
-                stock: Number(document.getElementById('prod-stock').value) || 0,
-                minimo: Number(document.getElementById('prod-minimo').value) || 0,
-                lote: document.getElementById('prod-lote').value.trim().toUpperCase(),
-                fecha: document.getElementById('prod-fecha').value
-            };
-
-            if(!payload.lote || !payload.fecha) { alert("Lote y Fecha son campos obligatorios."); return; }
-
-            if(idSeleccionado) {
-                db.collection("producto_terminado").doc(idSeleccionado).update(payload);
-            } else {
-                db.collection("producto_terminado").add(payload);
-            }
-            formProducto.classList.add('hidden');
-        });
-    </script>
-</body>
-</html>
+            <div class="flex gap-2 border-b border-slate-800 pb-2">
+                <button onclick="filtrarPorEstado('todos')" id="tab-todos" class="tab-btn px-4 py-2 rounded-xl font-bold text-xs uppercase bg-emerald-500 text-slate-950">Todos</button>
+                <button onclick="filtrarPorEstado('fresco')" id="tab-fresco" class="tab-btn px-4 py-2 rounded-xl font-bold text-xs uppercase bg-slate-900 text-slate-400">Frescura Óptima</button>
+                <button onclick="filtrarPorEstado('critico')" id="tab-critico" class="tab-btn px-4 py-2 rounded-xl font-bold text-xs uppercase bg-slate-900 text-slate-400">Madurez Límite (>120 días)</button>
+            </div>
